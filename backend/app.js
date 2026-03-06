@@ -1,13 +1,24 @@
-// app.js
-const express = require('express');
-const app = express();
+const express = require("express");
+const cors = require("cors");
+const connectDB = require("./config/db");
 
-// Middleware pour parser le JSON
+const authRoutes = require("./routes/auth.routes");
+const mazeRoutes = require("./routes/maze.routes");
+const performanceRoutes = require("./routes/performance.routes");
+
+const app = express();
+connectDB();
+
+app.use(cors());
 app.use(express.json());
 
-// Route test
-app.get('/', (req, res) => {
-  res.send('Hello MazeMind Backend!');
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/mazes", mazeRoutes);
+app.use("/api/performance", performanceRoutes);
+
+app.get("/", (req, res) => {
+  res.send("MazeMind API running");
 });
 
-module.exports = app; // très important
+module.exports = app;
