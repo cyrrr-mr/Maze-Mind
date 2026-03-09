@@ -1,21 +1,23 @@
 // routes/performance.routes.js
 const express = require('express');
 const router = express.Router();
+
+// ✅ Ici on met le bon chemin vers le middleware
+const auth = require('../middlewares/auth.middleware'); // <-- ajouter le "s" à "middlewares"
+
 const {
   createPerformance,
   getPerformances,
   getLeaderboard
 } = require('../controllers/performance.controller');
 
-// Routes Performance
+// POST /api/performances -> enregistrer un score (auth requis)
+router.post('/', auth, createPerformance);
 
-// POST /api/performance -> enregistrer un score
-router.post('/', createPerformance);
-
-// GET /api/performance -> tous les scores
+// GET /api/performances -> tous les scores (public)
 router.get('/', getPerformances);
 
-// GET /api/performance/leaderboard/:mazeId -> top 10 scores d'un labyrinthe
+// GET /api/performances/leaderboard/:mazeId -> top 10 scores d'un labyrinthe (public)
 router.get('/leaderboard/:mazeId', getLeaderboard);
 
 module.exports = router;

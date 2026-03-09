@@ -15,7 +15,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/mazes", mazeRoutes);
-app.use("/api/performance", performanceRoutes);
+app.use("/api/performances", performanceRoutes);
 
 app.get("/", (req, res) => {
   res.send("MazeMind API running");

@@ -1,15 +1,14 @@
 // controllers/performance.controller.js
 const Performance = require('../models/performance.model');
 
-// ⚡ Pour tester sans auth, on met un user fixe
-const TEST_USER_ID = "69ab39256155943f7c44d22d"; // remplace par ton vrai ID utilisateur
-
+// 🔹 Créer une performance (score) — JWT requis
 exports.createPerformance = async (req, res) => {
   try {
     const { maze, score, time } = req.body;
 
+    // req.user.id est injecté par le middleware auth
     const performance = new Performance({
-      user: TEST_USER_ID,
+      user: req.user.id,
       maze,
       score,
       time
@@ -22,6 +21,7 @@ exports.createPerformance = async (req, res) => {
   }
 };
 
+// 🔹 Récupérer toutes les performances
 exports.getPerformances = async (req, res) => {
   try {
     const performances = await Performance.find()
@@ -33,7 +33,7 @@ exports.getPerformances = async (req, res) => {
   }
 };
 
-// Leaderboard par labyrinthe
+// 🔹 Leaderboard par labyrinthe
 exports.getLeaderboard = async (req, res) => {
   try {
     const { mazeId } = req.params;
