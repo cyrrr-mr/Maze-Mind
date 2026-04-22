@@ -1,17 +1,25 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const KEY = "maze_progress";
-
-export async function getProgress() {
-  const data = await AsyncStorage.getItem(KEY);
-  return data ? JSON.parse(data) : { Facile: 1, Intermédiaire: 1, Difficile: 1 };
-}
-
-export async function unlockNext(niveau: string, level: number) {
-  const progress = await getProgress();
-
-  if (level >= progress[niveau]) {
-    progress[niveau] = level + 1;
-    await AsyncStorage.setItem(KEY, JSON.stringify(progress));
+export const unlockLevel = async (niveau: string, level: number): Promise<void> => {
+  const key = `progress_${niveau}`;
+  try {
+    const data = await AsyncStorage.getItem(key);
+    const current = data ? JSON.parse(data) : 1;
+    if (level > current) {
+      await AsyncStorage.setItem(key, JSON.stringify(level));
+    }
+  } catch (e) {
+    console.error("unlockLevel error:", e);
   }
-}
+};
+
+export const getProgress = async (niveau: string): Promise<number> => {
+  const key = `progress_${niveau}`;
+  try {
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : 1;
+  } catch (e) {
+    console.error("getProgress error:", e);
+    return 1;
+  }
+};

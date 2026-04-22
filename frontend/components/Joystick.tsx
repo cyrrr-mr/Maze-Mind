@@ -1,43 +1,64 @@
 import React, { useRef } from "react";
-import { View, Animated, PanResponder } from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet, Animated } from "react-native";
 
 export default function Joystick({ onMove }: { onMove: (dx: number, dy: number) => void }) {
-  const pan = useRef(new Animated.ValueXY()).current;
+  const makeAnim = () => useRef(new Animated.Value(1)).current;
+  const upA = makeAnim(), downA = makeAnim(), leftA = makeAnim(), rightA = makeAnim();
 
-  const responder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+  const pressBtn = (anim: Animated.Value, dx: number, dy: number) => {
+    Animated.sequence([
+      Animated.timing(anim, { toValue: 0.85, duration: 80, useNativeDriver: true }),
+      Animated.timing(anim, { toValue: 1,    duration: 80, useNativeDriver: true }),
+    ]).start();
+    onMove(dx, dy);
+  };
 
-      onPanResponderMove: (_, g) => {
-        if (Math.abs(g.dx) > Math.abs(g.dy)) {
-          if (g.dx > 20) onMove(1, 0);
-          if (g.dx < -20) onMove(-1, 0);
-        } else {
-          if (g.dy > 20) onMove(0, 1);
-          if (g.dy < -20) onMove(0, -1);
-        }
-      },
-
-      onPanResponderRelease: () => {
-        Animated.spring(pan, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: true,
-        }).start();
-      },
-    })
-  ).current;
+  const Btn = ({
+    anim, dx, dy, label,
+  }: {
+    anim: Animated.Value; dx: number; dy: number; label: string;
+  }) => (
+    <Animated.View style={{ transform: [{ scale: anim }] }}>
+      <TouchableOpacity
+        style={styles.btn}
+        onPress={() => pressBtn(anim, dx, dy)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.arrow}>{label}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 
   return (
-    <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: "#ddd", justifyContent: "center", alignItems: "center" }}>
-      <Animated.View
-        {...responder.panHandlers}
-        style={{
-          width: 50,
-          height: 50,
-          borderRadius: 25,
-          backgroundColor: "#555",
-        }}
-      />
+    <View style={styles.container}>
+      <Btn anim={upA}    dx={0}  dy={-1} label="▲" />
+      <View style={styles.row}>
+        <Btn anim={leftA}  dx={-1} dy={0}  label="◀" />
+        <View style={styles.center}><Text style={styles.dot}>⬤</Text></View>
+        <Btn anim={rightA} dx={1}  dy={0}  label="▶" />
+      </View>
+      <Btn anim={downA}  dx={0}  dy={1}  label="▼" />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { alignItems: "center", marginTop: 16, marginBottom: 24 },
+  row:       { flexDirection: "row", alignItems: "center" },
+  btn: {
+    width: 64, height: 64,
+    backgroundColor: "#6C63FF",
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    margin: 6,
+    elevation: 4,
+    shadowColor: "#6C63FF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+  },
+  arrow:  { fontSize: 24, color: "#fff", fontWeight: "900" },
+  center: { width: 64, height: 64, justifyContent: "center", alignItems: "center" },
+  dot:    { fontSize: 18, color: "rgba(108,99,255,0.3)" },
+});

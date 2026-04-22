@@ -1,73 +1,46 @@
-const Maze = require("../models/maze.model");
-const { createMazeForPlayer } = require("../ai/aiService"); // 🔥 AI
+// ✅ Correction du chemin vers aiService.js
+const { createMazeForPlayer } = require("../ai/aiService");
 
-// 🔹 Créer un labyrinthe (manuel / admin)
-exports.createMaze = async (req, res) => {
-  try {
-    const { name, difficulty, layout } = req.body;
-
-    const maze = new Maze({
-      name,
-      difficulty,
-      layout,
-      createdBy: req.user.id
-    });
-
-    await maze.save();
-
-    res.status(201).json({
-      message: "Maze created successfully",
-      maze
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-// 🔹 Récupérer tous les labyrinthes
-exports.getAllMazes = async (req, res) => {
-  try {
-    const mazes = await Maze.find();
-    res.json(mazes);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// 🔹 Récupérer un labyrinthe par ID
-exports.getMazeById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const maze = await Maze.findById(id);
-
-    if (!maze) {
-      return res.status(404).json({ message: "Maze not found" });
-    }
-
-    res.json(maze);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// 🤖 🔥 NOUVELLE PARTIE AI
+// 🤖 GET /api/mazes/ai?niveau=Facile&level=1
 exports.getAIMaze = async (req, res) => {
   try {
-    // ⚠️ plus tard tu prendras les vraies stats depuis DB
-    const playerStats = {
-      score: 60,
-      time: 40,
-      errors: 2
-    };
+    const { niveau = "Facile", level = "1" } = req.query;
+    const lvl = parseInt(level, 10) || 1;
 
-    const result = createMazeForPlayer(playerStats);
+    const mazeData = createMazeForPlayer(niveau, lvl);
 
-    res.json({
-      message: "AI Maze generated",
-      ...result
-    });
-
+    res.status(200).json(mazeData);
   } catch (error) {
+    console.error("getAIMaze error:", error);
     res.status(500).json({ error: error.message });
   }
+};
+
+// ✅ POST /api/mazes (compatibilité)
+exports.createMaze = async (req, res) => {
+  try {
+    const { niveau = "Facile", level = 1 } = req.body;
+    const lvl = parseInt(level, 10) || 1;
+
+    const mazeData = createMazeForPlayer(niveau, lvl);
+
+    res.status(201).json(mazeData);
+  } catch (error) {
+    console.error("createMaze error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ✅ GET all (info message)
+exports.getAllMazes = (req, res) => {
+  res.status(200).json({
+    message: "Use /api/mazes/ai for AI-generated mazes"
+  });
+};
+
+// ✅ GET by ID (info message)
+exports.getMazeById = (req, res) => {
+  res.status(200).json({
+    message: "Use /api/mazes/ai for AI-generated mazes"
+  });
 };

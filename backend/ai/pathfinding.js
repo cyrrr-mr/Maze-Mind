@@ -14,19 +14,29 @@ function bfs(maze, start, end) {
     if (visited.has(key)) continue;
     visited.add(key);
 
-    const directions = [[1,0],[-1,0],[0,1],[0,-1]];
+    const directions = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ];
 
-    for (let [dx, dy] of directions) {
+    for (const [dx, dy] of directions) {
       const nx = x + dx;
       const ny = y + dy;
-
-      if (maze[nx] && maze[nx][ny] === 0) {
+      if (
+        nx >= 0 &&
+        ny >= 0 &&
+        nx < maze.length &&
+        ny < maze[0].length &&
+        maze[nx][ny] === 0
+      ) {
         queue.push([[nx, ny], [...path, [nx, ny]]]);
       }
     }
   }
 
-  return null;
+  return [];
 }
 
 module.exports = bfs;

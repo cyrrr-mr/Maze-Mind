@@ -1,4 +1,4 @@
-require("dotenv").config(); // 👈 IMPORTANT
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
@@ -14,13 +14,12 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/mazes", mazeRoutes);
 app.use("/api/performances", performanceRoutes);
 
 app.get("/", (req, res) => {
-  res.send("MazeMind API running");
+  res.send("🧩 MazeMind API running ✅");
 });
 
 module.exports = app;

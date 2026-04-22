@@ -1,150 +1,248 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { generateMaze } from "../utiles/mazeGenerator";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import {
+  View, Text, StyleSheet, ImageBackground,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import MazeBoard from "../components/MazeBoard";
+import Joystick  from "../components/Joystick";
+import { unlockLevel } from "../utiles/progress";
+import { addScore }    from "../utiles/score";
 
-export default function PlayScreen() {
-  const rows = 10;
-  const cols = 10;
+const API_URL = "https://maze-mind.onrender.com";
 
-  const [grid, setGrid] = useState<any[][]>([]);
-  const [player, setPlayer] = useState({ r: 0, c: 0 });
-  const [won, setWon] = useState(false);
+type Cell = {
+  walls: { top: boolean; right: boolean; bottom: boolean; left: boolean };
+};
 
-  // INIT MAZE
+export default function PlayScreen({ route, navigation }: any) {
+  const { niveau, level } = route.params;
+
+  const [mazeGrid, setMazeGrid]         = useState<Cell[][]>([]);
+  const [player, setPlayer]             = useState({ r: 0, c: 0 });
+  const [end, setEnd]                   = useState({ r: 0, c: 0 });
+  const [loading, setLoading]           = useState(true);
+  const [won, setWon]                   = useState(false);
+  const [timeLeft, setTimeLeft]         = useState(0);
+  const [hasTimer, setHasTimer]         = useState(false);
+  const [avatarIdx, setAvatarIdx]       = useState(0);
+  const [optimalSteps, setOptimalSteps] = useState(0);
+
+  const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stepsRef     = useRef(0);
+  const elapsedRef   = useRef(0);
+  const wonRef       = useRef(false);
+  const timeLimitRef = useRef(0);
+
+  // Charger avatar
   useEffect(() => {
-    setGrid(generateMaze(rows, cols));
+    AsyncStorage.getItem("user").then((d) => {
+      if (d) {
+        const u = JSON.parse(d);
+        setAvatarIdx(typeof u.avatar === "number" ? u.avatar : 0);
+      }
+    });
   }, []);
 
-  // MOVE PLAYER
-  const move = useCallback(
-    (dir: "up" | "down" | "left" | "right") => {
-      if (!grid.length || won) return;
+  // Conversion grille 0/1 → murs
+  const convertMaze = (maze: number[][]): Cell[][] => {
+    const size = maze.length;
+    return maze.map((row, r) =>
+      row.map((_, c) => ({
+        walls: {
+          top:    r === 0        || maze[r - 1][c] === 1,
+          bottom: r === size - 1 || maze[r + 1][c] === 1,
+          left:   c === 0        || maze[r][c - 1] === 1,
+          right:  c === size - 1 || maze[r][c + 1] === 1,
+        },
+      }))
+    );
+  };
 
-      setPlayer((p) => {
-        const cell = grid[p.r][p.c];
+  // Load maze
+  const loadMaze = useCallback(async () => {
+    try {
+      setLoading(true);
+      setWon(false);
+      wonRef.current     = false;
+      stepsRef.current   = 0;
+      elapsedRef.current = 0;
 
-        let nr = p.r;
-        let nc = p.c;
+      if (timerRef.current) clearInterval(timerRef.current);
 
-        if (dir === "up" && !cell.walls.top) nr--;
-        if (dir === "down" && !cell.walls.bottom) nr++;
-        if (dir === "left" && !cell.walls.left) nc--;
-        if (dir === "right" && !cell.walls.right) nc++;
+      const res = await fetch(
+        `${API_URL}/api/mazes/ai?niveau=${encodeURIComponent(niveau)}&level=${level}`
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        return { r: nr, c: nc };
-      });
-    },
-    [grid, won]
-  );
+      const data = await res.json();
+      if (!data.maze) throw new Error("No maze data");
 
-  // WIN CHECK (FIXED)
-  useEffect(() => {
-    if (!grid.length || won) return;
-
-    const end = { r: rows - 1, c: cols - 1 };
-
-    if (player.r === end.r && player.c === end.c) {
-      setWon(true);
-
-      Alert.alert("🎉 Bravo", "You finished the maze!");
-
-      setTimeout(() => {
-        setGrid(generateMaze(rows, cols));
-        setPlayer({ r: 0, c: 0 });
-        setWon(false);
-      }, 1200);
+      setMazeGrid(convertMaze(data.maze));
+      setPlayer({ r: 0, c: 0 });
+      setEnd({ r: data.size - 1, c: data.size - 1 });
+      setHasTimer(data.hasTimer || false);
+      setTimeLeft(data.timeLimit || 0);
+      setOptimalSteps(data.optimalSteps || 0);
+      timeLimitRef.current = data.timeLimit || 0;
+    } catch (err) {
+      console.error("loadMaze error:", err);
+    } finally {
+      setLoading(false);
     }
-  }, [player, grid, won]);
+  }, [niveau, level]);
+
+  useEffect(() => { loadMaze(); }, [loadMaze]);
+
+  // Timer
+  useEffect(() => {
+    if (loading || !hasTimer) return;
+
+    timerRef.current = setInterval(() => {
+      if (wonRef.current) {
+        clearInterval(timerRef.current!);
+        return;
+      }
+      elapsedRef.current += 1;
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          navigation.replace("Fail", { niveau, level });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [loading, hasTimer, navigation, niveau, level]);
+
+  // Move
+  const move = (dx: number, dy: number) => {
+    setPlayer((prev) => {
+      const newR = prev.r + dy;
+      const newC = prev.c + dx;
+
+      if (!mazeGrid[newR] || mazeGrid[newR][newC] === undefined) return prev;
+
+      const cell = mazeGrid[prev.r][prev.c];
+      if (dx === 1  && cell.walls.right)  return prev;
+      if (dx === -1 && cell.walls.left)   return prev;
+      if (dy === 1  && cell.walls.bottom) return prev;
+      if (dy === -1 && cell.walls.top)    return prev;
+
+      stepsRef.current += 1;
+      return { r: newR, c: newC };
+    });
+  };
+
+  // Win check
+  useEffect(() => {
+    if (!mazeGrid.length || won) return;
+    if (player.r !== end.r || player.c !== end.c) return;
+
+    setWon(true);
+    wonRef.current = true;
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    const steps     = stepsRef.current;
+    const elapsed   = elapsedRef.current;
+    const timeLimit = timeLimitRef.current;
+
+    const stepRatio = optimalSteps > 0 ? optimalSteps / Math.max(steps, 1) : 1;
+    let score = Math.round(1000 * Math.min(stepRatio, 1));
+    if (hasTimer && timeLimit > 0) {
+      const timeBonus = Math.round(500 * (1 - elapsed / timeLimit));
+      score += Math.max(timeBonus, 0);
+      if (niveau === "Difficile")       score *= 2;
+      else if (niveau === "Intermédiaire") score = Math.round(score * 1.5);
+    }
+    score = Math.max(score, 50);
+
+    unlockLevel(niveau, level + 1);
+    addScore(score);
+
+    navigation.replace("Win", {
+      niveau, level,
+      time:  hasTimer ? elapsed : null,
+      score,
+    });
+  }, [player, end, mazeGrid.length, won, navigation, niveau, level, hasTimer, optimalSteps]);
+
+  const timerColor = () => {
+    if (timeLeft > 30) return "#4CAF50";
+    if (timeLeft > 15) return "#FF9800";
+    return "#F44336";
+  };
+
+  if (loading || !mazeGrid.length) {
+    return (
+      <ImageBackground
+        source={require("../assets/play.png")}
+        style={styles.bg}
+        resizeMode="cover"
+      >
+        {/* ✅ absoluteFill */}
+        <View style={styles.overlay} />
+        <View style={styles.center}>
+          <Text style={styles.loadingEmoji}>🧩</Text>
+          <Text style={styles.loadingText}>Génération du labyrinthe…</Text>
+        </View>
+      </ImageBackground>
+    );
+  }
+
+  const cellSize = Math.min(Math.floor(320 / mazeGrid.length), 36);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Maze Game</Text>
+    <ImageBackground
+      source={require("../assets/play.png")}
+      style={styles.bg}
+      resizeMode="cover"
+    >
+      {/* ✅ absoluteFill */}
+      <View style={styles.overlay} />
 
-      {/* MAZE */}
-      <View style={styles.maze}>
-        {grid.map((row, r) => (
-          <View key={r} style={{ flexDirection: "row" }}>
-            {row.map((cell, c) => {
-              const isPlayer = player.r === r && player.c === c;
-              const isEnd = r === rows - 1 && c === cols - 1;
-
-              return (
-                <View
-                  key={c}
-                  style={[
-                    styles.cell,
-                    {
-                      backgroundColor: isPlayer
-                        ? "#4CAF50"
-                        : isEnd
-                        ? "#FFD93D"
-                        : "#fff",
-                      borderTopWidth: cell.walls.top ? 2 : 0,
-                      borderBottomWidth: cell.walls.bottom ? 2 : 0,
-                      borderLeftWidth: cell.walls.left ? 2 : 0,
-                      borderRightWidth: cell.walls.right ? 2 : 0,
-                    },
-                  ]}
-                />
-              );
-            })}
-          </View>
-        ))}
-      </View>
-
-      {/* CONTROLS */}
-      <View style={styles.controls}>
-        <TouchableOpacity onPress={() => move("up")} style={styles.btn}>
-          <Text>⬆️</Text>
-        </TouchableOpacity>
-
-        <View style={{ flexDirection: "row" }}>
-          <TouchableOpacity onPress={() => move("left")} style={styles.btn}>
-            <Text>⬅️</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => move("down")} style={styles.btn}>
-            <Text>⬇️</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => move("right")} style={styles.btn}>
-            <Text>➡️</Text>
-          </TouchableOpacity>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{niveau} — Level {level}</Text>
+          <Text style={styles.steps}>👣 {stepsRef.current} pas</Text>
+          {hasTimer && (
+            <View style={[styles.timerBox, { borderColor: timerColor() }]}>
+              <Text style={[styles.timerText, { color: timerColor() }]}>
+                ⏱ {timeLeft}s
+              </Text>
+            </View>
+          )}
         </View>
+
+        <MazeBoard
+          grid={mazeGrid}
+          player={player}
+          end={end}
+          cellSize={cellSize}
+          avatarIndex={avatarIdx}
+        />
+
+        <Joystick onMove={move} />
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2f2f2", padding: 20 },
-
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 10,
+  bg:          { flex: 1 },
+  // ✅ absoluteFill
+  overlay:     { ...StyleSheet.absoluteFill, backgroundColor: "rgba(255,255,255,0.22)" },
+  container:   { flex: 1, alignItems: "center" },
+  center:      { flex: 1, justifyContent: "center", alignItems: "center" },
+  header:      { marginTop: 52, marginBottom: 12, alignItems: "center", gap: 6 },
+  title:       { fontSize: 18, fontWeight: "900", color: "#333", letterSpacing: 0.5 },
+  steps:       { fontSize: 13, color: "#666" },
+  timerBox:    {
+    borderWidth: 2, borderRadius: 20,
+    paddingHorizontal: 18, paddingVertical: 5, marginTop: 4,
   },
-
-  maze: {
-    alignSelf: "center",
-    marginTop: 20,
-  },
-
-  cell: {
-    width: 28,
-    height: 28,
-  },
-
-  controls: {
-    marginTop: 30,
-    alignItems: "center",
-  },
-
-  btn: {
-    backgroundColor: "#ddd",
-    padding: 15,
-    margin: 5,
-    borderRadius: 10,
-  },
+  timerText:    { fontSize: 18, fontWeight: "800" },
+  loadingEmoji: { fontSize: 52, marginBottom: 12 },
+  loadingText:  { fontSize: 16, color: "#333", fontWeight: "700" },
 });
