@@ -1,3 +1,5 @@
+require("dotenv").config(); // ✅ AJOUTER CETTE LIGNE
+
 const app = require("./app");
 
 const PORT = process.env.PORT || 5000;

@@ -1,5 +1,5 @@
 function getDifficulty(niveau, level) {
-  // Niveau FACILE — 3 levels, pas de timer, score basé sur les pas
+  // Niveau FACILE — 3 levels, pas de timer, pas d'obstacles
   if (niveau === "Facile") {
     const sizes = { 1: 7, 2: 9, 3: 11 };
     return {
@@ -8,10 +8,11 @@ function getDifficulty(niveau, level) {
       hasTimer: false,
       timeLimit: 0,
       obstacles: false,
+      obstacleCount: 0,
     };
   }
 
-  // Niveau INTERMÉDIAIRE — 5 levels, timer, peu d'obstacles
+  // Niveau INTERMÉDIAIRE — 5 levels, timer + obstacles modérés
   if (niveau === "Intermédiaire") {
     const sizes = { 1: 11, 2: 13, 3: 13, 4: 15, 5: 15 };
     const times = { 1: 120, 2: 100, 3: 90, 4: 80, 5: 70 };
@@ -21,11 +22,11 @@ function getDifficulty(niveau, level) {
       hasTimer: true,
       timeLimit: times[level] || 90,
       obstacles: true,
-      obstacleCount: Math.floor(level * 1.5),
+      obstacleCount: level * 3, // ✅ augmenté
     };
   }
 
-  // Niveau DIFFICILE — 5 levels, timer serré, beaucoup d'obstacles
+  // Niveau DIFFICILE — 5 levels, timer serré + beaucoup d'obstacles
   if (niveau === "Difficile") {
     const sizes = { 1: 15, 2: 17, 3: 17, 4: 19, 5: 21 };
     const times = { 1: 60, 2: 55, 3: 50, 4: 45, 5: 40 };
@@ -35,7 +36,7 @@ function getDifficulty(niveau, level) {
       hasTimer: true,
       timeLimit: times[level] || 50,
       obstacles: true,
-      obstacleCount: Math.floor(level * 3),
+      obstacleCount: level * 3,
     };
   }
 
@@ -46,6 +47,7 @@ function getDifficulty(niveau, level) {
     hasTimer: false,
     timeLimit: 0,
     obstacles: false,
+    obstacleCount: 0,
   };
 }
 

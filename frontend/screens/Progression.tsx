@@ -1,31 +1,66 @@
 import React, { useState } from "react";
 import {
-  View, Text, TouchableOpacity, ImageBackground,
-  StyleSheet, ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  ImageBackground,
+  StyleSheet,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { getProgress } from "../utiles/progress";
 import { getMedalForNiveau } from "../utiles/medals";
 
 const TOTAL: Record<string, number> = {
-  Facile:           3,
-  "Intermédiaire":  5,
-  Difficile:        5,
+  Facile: 3,
+  "Intermédiaire": 5,
+  Difficile: 5,
 };
 
 export default function Progression({ route, navigation }: any) {
   const { niveau } = route.params;
   const total = TOTAL[niveau] || 3;
-  const [unlocked, setUnlocked] = useState(1);
 
+  const [unlocked, setUnlocked] = useState<number>(1);
+
+  const [globalProgress, setGlobalProgress] = useState({
+    Facile: 0,
+    "Intermédiaire": 0,
+    Difficile: 0,
+  });
+
+  // ✅ Charger progression locale + globale
   useFocusEffect(
     React.useCallback(() => {
-      getProgress(niveau).then((p: number) => setUnlocked(Math.max(p, 1)));
+      const loadProgress = async () => {
+        const current = await getProgress(niveau);
+        setUnlocked(Math.max(Number(current) || 1, 1));
+
+        const f = await getProgress("Facile");
+        const i = await getProgress("Intermédiaire");
+        const d = await getProgress("Difficile");
+
+        setGlobalProgress({
+          Facile: Number(f) || 0,
+          "Intermédiaire": Number(i) || 0,
+          Difficile: Number(d) || 0,
+        });
+      };
+
+      loadProgress();
     }, [niveau])
   );
 
-  const medal   = getMedalForNiveau(niveau);
+  const medal = getMedalForNiveau(niveau);
   const allDone = unlocked > total;
+
+  // ✅ Conditions globales
+  const facileCompleted = globalProgress.Facile >= 4;
+  const interCompleted = globalProgress["Intermédiaire"] >= 6;
+
+  const isNiveauLocked =
+    (niveau === "Intermédiaire" && !facileCompleted) ||
+    (niveau === "Difficile" && !interCompleted);
 
   return (
     <ImageBackground
@@ -33,7 +68,6 @@ export default function Progression({ route, navigation }: any) {
       style={styles.bg}
       resizeMode="cover"
     >
-      {/* ✅ absoluteFill */}
       <View style={styles.overlay} />
 
       <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
@@ -43,72 +77,133 @@ export default function Progression({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>{niveau}</Text>
 
-        {medal && (
-          <View style={[styles.medalHint, { borderColor: medal.color }]}>
-            <Text style={styles.medalEmoji}>{medal.emoji}</Text>
-            <Text style={styles.medalText}>
-              {allDone
-                ? `🎉 Médaille ${medal.label} débloquée !`
-                : `Complète tous les niveaux pour la médaille ${medal.label}`}
+        {isNiveauLocked ? (
+          <View style={styles.lockBox}>
+            <Text style={styles.lockEmoji}>🔒</Text>
+            <Text style={styles.lockText}>
+              Termine le niveau précédent pour débloquer {niveau}
             </Text>
           </View>
-        )}
-
-        {Array.from({ length: total }).map((_, i) => {
-          const lvl    = i + 1;
-          const locked = lvl > unlocked;
-          const done   = lvl < unlocked;
-
-          return (
-            <TouchableOpacity
-              key={lvl}
-              disabled={locked}
-              onPress={() => navigation.navigate("Play", { niveau, level: lvl })}
-              style={[
-                styles.levelBtn,
-                locked ? styles.locked : done ? styles.done : styles.current,
-              ]}
-            >
-              <Text style={styles.levelEmoji}>
-                {locked ? "🔒" : done ? "✅" : "🎯"}
-              </Text>
-              <View>
-                <Text style={styles.levelTitle}>
-                  {locked ? "Verrouillé" : `Level ${lvl}`}
+        ) : (
+          <>
+            {medal && (
+              <View style={[styles.medalHint, { borderColor: medal.color }]}>
+                <Text style={styles.medalEmoji}>{medal.emoji}</Text>
+                <Text style={styles.medalText}>
+                  {allDone
+                    ? `🎉 Médaille ${medal.label} débloquée !`
+                    : `Complète tous les niveaux pour la médaille ${medal.label}`}
                 </Text>
-                {!locked && (
-                  <Text style={styles.levelSub}>
-                    {done ? "Complété ✓" : "En cours"}
-                  </Text>
-                )}
               </View>
-            </TouchableOpacity>
-          );
-        })}
+            )}
+
+            {Array.from({ length: total }).map((_, i) => {
+              const lvl = i + 1;
+              const locked = lvl > unlocked;
+              const done = lvl < unlocked;
+
+              return (
+                <TouchableOpacity
+                  key={lvl}
+                  disabled={locked}
+                  onPress={() =>
+                    navigation.navigate("Play", { niveau, level: lvl })
+                  }
+                  style={[
+                    styles.levelBtn,
+                    locked
+                      ? styles.locked
+                      : done
+                      ? styles.done
+                      : styles.current,
+                  ]}
+                >
+                  <Text style={styles.levelEmoji}>
+                    {locked ? "🔒" : done ? "✅" : "🎯"}
+                  </Text>
+                  <View>
+                    <Text style={styles.levelTitle}>
+                      {locked ? "Verrouillé" : `Level ${lvl}`}
+                    </Text>
+                    {!locked && (
+                      <Text style={styles.levelSub}>
+                        {done ? "Complété ✓" : "En cours"}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  bg:      { flex: 1 },
-  // ✅ absoluteFill
-  overlay: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(255,255,255,0.2)" },
+  bg: { flex: 1 },
+
+  // ✅ CORRECTION ICI
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+
   back: {
     position: "absolute",
-    top: 50, left: 20,
+    top: 50,
+    left: 20,
     zIndex: 10,
     padding: 10,
     backgroundColor: "rgba(0,0,0,0.25)",
     borderRadius: 14,
   },
-  backText:  { color: "#fff", fontWeight: "700", fontSize: 15 },
-  container: { paddingTop: 110, paddingBottom: 40, alignItems: "center", gap: 14 },
-  title:     { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 10 },
+
+  backText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  container: {
+    paddingTop: 110,
+    paddingBottom: 40,
+    alignItems: "center",
+    gap: 14,
+  },
+
+  title: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: "#fff",
+    marginBottom: 10,
+  },
+
+  lockBox: {
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 18,
+    padding: 18,
+    width: "85%",
+    alignItems: "center",
+  },
+
+  lockEmoji: {
+    fontSize: 32,
+    marginBottom: 6,
+  },
+
+  lockText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#333",
+    textAlign: "center",
+  },
+
   medalHint: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.88)",
+    backgroundColor: "rgba(255,255,255,0.9)",
     borderRadius: 16,
     borderWidth: 2,
     padding: 12,
@@ -116,8 +211,18 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  medalEmoji: { fontSize: 28 },
-  medalText:  { flex: 1, fontSize: 13, color: "#444", fontWeight: "600" },
+
+  medalEmoji: {
+    fontSize: 28,
+  },
+
+  medalText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#444",
+    fontWeight: "600",
+  },
+
   levelBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -127,10 +232,22 @@ const styles = StyleSheet.create({
     gap: 16,
     elevation: 4,
   },
-  locked:     { backgroundColor: "#ccc" },
-  done:       { backgroundColor: "#B5EAD7" },
-  current:    { backgroundColor: "#FFB7B2" },
+
+  locked: { backgroundColor: "#ccc" },
+  done: { backgroundColor: "#B5EAD7" },
+  current: { backgroundColor: "#FFB7B2" },
+
   levelEmoji: { fontSize: 28 },
-  levelTitle: { fontSize: 17, fontWeight: "800", color: "#333" },
-  levelSub:   { fontSize: 12, color: "#666", marginTop: 2 },
+
+  levelTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#333",
+  },
+
+  levelSub: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
 });

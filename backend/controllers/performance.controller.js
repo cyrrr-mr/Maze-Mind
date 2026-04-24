@@ -27,26 +27,26 @@ async function checkAndAwardMedals(userId) {
   const user = await User.findById(userId);
   if (!user) return { unlocked: null };
 
-  const facile = user.progress["Facile"] || 0;
-  const inter = user.progress["Intermédiaire"] || 0;
-  const difficile = user.progress["Difficile"] || 0;
+  const facileCompleted = (user.progress["Facile"] || 0) >= 4;
+  const interCompleted = (user.progress["Intermédiaire"] || 0) >= 6;
+  const hardCompleted = (user.progress["Difficile"] || 0) >= 6;
 
   let unlocked = null;
 
-  // 🥉 Débutant
-  if (!user.medals.debutant && facile >= 4) {
+  // ✅ Débutant = finir Facile
+  if (!user.medals.debutant && facileCompleted) {
     user.medals.debutant = true;
     unlocked = "Débutant";
   }
 
-  // 🥈 Avancé
-  else if (!user.medals.avance && inter >= 6) {
+  // ✅ Avancé = finir Intermédiaire
+  if (!user.medals.avance && interCompleted) {
     user.medals.avance = true;
     unlocked = "Avancé";
   }
 
-  // 🥇 Pro
-  else if (!user.medals.pro && (difficile >= 6 || user.totalScore >= 5000)) {
+  // ✅ Pro = finir Difficile UNIQUEMENT
+  if (!user.medals.pro && hardCompleted) {
     user.medals.pro = true;
     unlocked = "Pro";
   }
@@ -95,7 +95,7 @@ exports.createPerformance = async (req, res) => {
       }
     }
 
-    // Débloquer Intermédiaire
+    // Débloquer Intermédiaire si Facile terminé
     if (niveau === "Facile" && nextLevel > 3) {
       if (!updateData.$set) updateData.$set = {};
       if ((user.progress["Intermédiaire"] || 0) === 0) {
@@ -103,7 +103,7 @@ exports.createPerformance = async (req, res) => {
       }
     }
 
-    // Débloquer Difficile
+    // Débloquer Difficile si Intermédiaire terminé
     if (niveau === "Intermédiaire" && nextLevel > 5) {
       if (!updateData.$set) updateData.$set = {};
       if ((user.progress["Difficile"] || 0) === 0) {
@@ -113,7 +113,7 @@ exports.createPerformance = async (req, res) => {
 
     await User.findByIdAndUpdate(req.user.id, updateData);
 
-    // ✅ Vérifier médailles
+    // ✅ Vérifier médailles APRÈS mise à jour
     const { unlocked } = await checkAndAwardMedals(req.user.id);
 
     const updatedUser = await User.findById(req.user.id).select("-password");

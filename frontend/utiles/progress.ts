@@ -1,25 +1,22 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const unlockLevel = async (niveau: string, level: number): Promise<void> => {
-  const key = `progress_${niveau}`;
+// ✅ On ne stocke plus la progression localement.
+// ✅ On utilise uniquement la progression venant du backend.
+
+export const getProgress = async (niveau: string): Promise<number> => {
   try {
-    const data = await AsyncStorage.getItem(key);
-    const current = data ? JSON.parse(data) : 1;
-    if (level > current) {
-      await AsyncStorage.setItem(key, JSON.stringify(level));
-    }
+    const data = await AsyncStorage.getItem("user");
+    if (!data) return 0;
+
+    const user = JSON.parse(data);
+    return user?.progress?.[niveau] || 0;
   } catch (e) {
-    console.error("unlockLevel error:", e);
+    console.error("getProgress error:", e);
+    return 0;
   }
 };
 
-export const getProgress = async (niveau: string): Promise<number> => {
-  const key = `progress_${niveau}`;
-  try {
-    const data = await AsyncStorage.getItem(key);
-    return data ? JSON.parse(data) : 1;
-  } catch (e) {
-    console.error("getProgress error:", e);
-    return 1;
-  }
+// ✅ Plus rien ici : backend gère tout
+export const unlockLevel = async () => {
+  return;
 };

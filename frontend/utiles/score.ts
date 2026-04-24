@@ -1,23 +1,36 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authFetch, BASE_URL } from "./api";
 
-export const addScore = async (points: number) => {
+export const addScore = async (
+  niveau: string,
+  level: number,
+  steps: number,
+  optimalSteps: number,
+  timeTaken: number,
+  timeLimit: number
+) => {
   try {
-    const data = await AsyncStorage.getItem("user");
-    if (!data) return;
-    const user = JSON.parse(data);
-    const newScore = (user.score || 0) + points;
-    await AsyncStorage.setItem("user", JSON.stringify({ ...user, score: newScore }));
+    const response = await authFetch("/api/performances", {
+      method: "POST",
+      body: JSON.stringify({
+        niveau,
+        level,
+        steps,
+        optimalSteps,
+        timeTaken,
+        timeLimit,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.user) {
+      // ✅ Mettre à jour le user complet venant du backend
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+    }
+
+    return data; // contient newMedalUnlocked
   } catch (e) {
     console.error("addScore error:", e);
-  }
-};
-
-export const getScore = async (): Promise<number> => {
-  try {
-    const data = await AsyncStorage.getItem("user");
-    if (!data) return 0;
-    return JSON.parse(data).score || 0;
-  } catch {
-    return 0;
   }
 };

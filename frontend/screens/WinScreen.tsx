@@ -106,8 +106,8 @@ export default function WinScreen({ route, navigation }: any) {
 
         <TouchableOpacity
           style={styles.btnNext}
-          onPress={() => navigation.replace("Play", { niveau, level: level + 1 })}
-        >
+          onPress={() => navigation.replace("Play", { niveau, level })}
+          >
           <Text style={styles.btnNextText}>▶ Niveau suivant</Text>
         </TouchableOpacity>
 

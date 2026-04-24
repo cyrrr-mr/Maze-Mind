@@ -1,7 +1,9 @@
 import React from "react";
 import { View, StyleSheet, Image } from "react-native";
 
+// ✅ Type mis à jour pour inclure 'type'
 type Cell = {
+  type: number; // 0: chemin, 1: mur, 2: obstacle
   walls: { top: boolean; right: boolean; bottom: boolean; left: boolean };
 };
 
@@ -23,6 +25,7 @@ const avatars = [
 const WALL_COLOR      = "#6C63FF";
 const PATH_COLOR      = "#FFF8F0";
 const END_COLOR       = "#FFD93D";
+const OBSTACLE_COLOR  = "#FF6B6B"; // ✅ Couleur Rouge pour les obstacles
 const BORDER_RADIUS   = 3;
 const WALL_THICKNESS  = 2;
 
@@ -37,6 +40,14 @@ export default function MazeBoard({ grid, player, end, cellSize, avatarIndex = 0
             const isPlayer = player.r === r && player.c === c;
             const isEnd    = end.r === r && end.c === c;
 
+            // ✅ Logique de couleur dynamique
+            let cellColor = PATH_COLOR;
+            if (isEnd) {
+              cellColor = END_COLOR;
+            } else if (cell.type === 2) {
+              cellColor = OBSTACLE_COLOR; // ✅ Affiche l'obstacle en rouge
+            }
+
             return (
               <View
                 key={c}
@@ -45,7 +56,7 @@ export default function MazeBoard({ grid, player, end, cellSize, avatarIndex = 0
                   {
                     width: cellSize,
                     height: cellSize,
-                    backgroundColor: isEnd ? END_COLOR : PATH_COLOR,
+                    backgroundColor: cellColor,
                     borderTopWidth:    cell.walls.top    ? WALL_THICKNESS : 0,
                     borderRightWidth:  cell.walls.right  ? WALL_THICKNESS : 0,
                     borderBottomWidth: cell.walls.bottom ? WALL_THICKNESS : 0,
@@ -64,10 +75,6 @@ export default function MazeBoard({ grid, player, end, cellSize, avatarIndex = 0
                     }}
                   />
                 )}
-                {isEnd && !isPlayer && (
-                  <View style={styles.endFlag}>
-                  </View>
-                )}
               </View>
             );
           })}
@@ -84,10 +91,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: BORDER_RADIUS,
-  },
-  endFlag: {
-    width: 12, height: 12,
-    borderRadius: 6,
-    backgroundColor: "#FF6B6B",
   },
 });
