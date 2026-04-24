@@ -24,6 +24,7 @@ function bfs(maze, start, end) {
     for (const [dx, dy] of directions) {
       const nx = x + dx;
       const ny = y + dy;
+
       if (
         nx >= 0 &&
         ny >= 0 &&

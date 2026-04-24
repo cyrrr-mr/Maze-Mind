@@ -44,7 +44,7 @@ function ConfettiPiece({ color, delay }: { color: string; delay: number }) {
 }
 
 export default function WinScreen({ route, navigation }: any) {
-  const { niveau, level, time, score } = route.params;
+  const { niveau, level, time, score, medal } = route.params;
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const [s1, s2, s3] = [
@@ -59,18 +59,11 @@ export default function WinScreen({ route, navigation }: any) {
     if (time < 30) return 2;
     return 1;
   };
+
   const stars = getStars();
 
   useEffect(() => {
     Animated.spring(scaleAnim, { toValue: 1, tension: 50, friction: 5, useNativeDriver: true }).start();
-    Animated.sequence([
-      Animated.delay(300),
-      Animated.spring(s1, { toValue: 1, tension: 80, friction: 5, useNativeDriver: true }),
-      Animated.delay(150),
-      Animated.spring(s2, { toValue: 1, tension: 80, friction: 5, useNativeDriver: true }),
-      Animated.delay(150),
-      Animated.spring(s3, { toValue: 1, tension: 80, friction: 5, useNativeDriver: true }),
-    ]).start();
   }, []);
 
   return (
@@ -84,17 +77,23 @@ export default function WinScreen({ route, navigation }: any) {
         <Text style={styles.title}>Bravo !</Text>
         <Text style={styles.subtitle}>Level {level} — {niveau}</Text>
 
-        {/* Étoiles */}
+        {/* ✅ MÉDAILLE */}
+        {medal && (
+          <View style={styles.medalBox}>
+            <Text style={styles.medalEmoji}>🏆</Text>
+            <Text style={styles.medalText}>Médaille {medal} débloquée !</Text>
+          </View>
+        )}
+
         <View style={styles.starsRow}>
           {[s1, s2, s3].map((anim, i) => (
             <Animated.Text
               key={i}
-              style={[styles.star, { transform: [{ scale: anim }] }, i >= stars && styles.starOff]}
+              style={[styles.star, i >= stars && styles.starOff]}
             >⭐</Animated.Text>
           ))}
         </View>
 
-        {/* Score */}
         <View style={styles.scoreBox}>
           <Text style={styles.scoreLabel}>Score</Text>
           <Text style={styles.scoreValue}>+{score ?? 0}</Text>
@@ -107,7 +106,7 @@ export default function WinScreen({ route, navigation }: any) {
         <TouchableOpacity
           style={styles.btnNext}
           onPress={() => navigation.replace("Play", { niveau, level })}
-          >
+        >
           <Text style={styles.btnNextText}>▶ Niveau suivant</Text>
         </TouchableOpacity>
 
@@ -123,37 +122,63 @@ export default function WinScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: "#1a1a2e", justifyContent: "center", alignItems: "center" },
+  container: { flex: 1, backgroundColor: "#1a1a2e", justifyContent: "center", alignItems: "center" },
   confettiPiece:{ position: "absolute", top: 0, left: 0, width: 10, height: 10, borderRadius: 2 },
   card: {
-    backgroundColor: "#fff", borderRadius: 30,
-    padding: 36, alignItems: "center", width: "82%",
-    elevation: 12, shadowColor: "#000",
-    shadowOpacity: 0.3, shadowRadius: 20,
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    padding: 36,
+    alignItems: "center",
+    width: "82%",
+    elevation: 12,
   },
-  emoji:       { fontSize: 64, marginBottom: 8 },
-  title:       { fontSize: 36, fontWeight: "900", color: "#333" },
-  subtitle:    { fontSize: 16, color: "#888", marginBottom: 16 },
-  starsRow:    { flexDirection: "row", gap: 8, marginBottom: 12 },
-  star:        { fontSize: 38 },
-  starOff:     { opacity: 0.2 },
-  scoreBox:    {
-    backgroundColor: "#FFD93D33", borderRadius: 16,
-    paddingVertical: 10, paddingHorizontal: 28,
-    alignItems: "center", marginBottom: 10,
+  emoji: { fontSize: 64, marginBottom: 8 },
+  title: { fontSize: 36, fontWeight: "900", color: "#333" },
+  subtitle: { fontSize: 16, color: "#888", marginBottom: 16 },
+
+  medalBox: {
+    backgroundColor: "#6C63FF22",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+    alignItems: "center",
   },
-  scoreLabel:  { fontSize: 12, color: "#888", letterSpacing: 1 },
-  scoreValue:  { fontSize: 28, fontWeight: "900", color: "#333" },
-  time:        { fontSize: 14, color: "#666", marginBottom: 20 },
+  medalEmoji: { fontSize: 28 },
+  medalText: { fontSize: 14, fontWeight: "700", color: "#6C63FF" },
+
+  starsRow: { flexDirection: "row", marginBottom: 12 },
+  star: { fontSize: 38 },
+  starOff: { opacity: 0.2 },
+
+  scoreBox: {
+    backgroundColor: "#FFD93D33",
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  scoreLabel: { fontSize: 12, color: "#888" },
+  scoreValue: { fontSize: 28, fontWeight: "900", color: "#333" },
+  time: { fontSize: 14, color: "#666", marginBottom: 20 },
+
   btnNext: {
-    backgroundColor: "#6C63FF", paddingVertical: 14,
-    paddingHorizontal: 30, borderRadius: 25, marginBottom: 10,
-    width: "100%", alignItems: "center", elevation: 4,
+    backgroundColor: "#6C63FF",
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    marginBottom: 10,
+    width: "100%",
+    alignItems: "center",
   },
   btnNextText: { color: "#fff", fontSize: 17, fontWeight: "900" },
+
   btnBack: {
-    backgroundColor: "#f0f0f0", paddingVertical: 12,
-    borderRadius: 25, width: "100%", alignItems: "center",
+    backgroundColor: "#f0f0f0",
+    paddingVertical: 12,
+    borderRadius: 25,
+    width: "100%",
+    alignItems: "center",
   },
   btnBackText: { color: "#555", fontSize: 15, fontWeight: "700" },
 });

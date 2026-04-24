@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ImageBackground,
-  Alert,
   Dimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -111,31 +110,27 @@ export default function PlayScreen({ route, navigation }: any) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [hasTimer, loading, navigation, niveau, level]);
+  }, [hasTimer, loading]);
 
   const move = (dx: number, dy: number) => {
-  setPlayer((prev) => {
-    const newR = prev.r + dy;
-    const newC = prev.c + dx;
+    setPlayer((prev) => {
+      const newR = prev.r + dy;
+      const newC = prev.c + dx;
 
-    if (!mazeGrid[newR] || mazeGrid[newR][newC] === undefined) return prev;
+      if (!mazeGrid[newR] || mazeGrid[newR][newC] === undefined) return prev;
 
-    const cell = mazeGrid[prev.r][prev.c];
+      const cell = mazeGrid[prev.r][prev.c];
 
-    // ✅ Vérifier murs
-    if (dx === 1 && cell.walls.right) return prev;
-    if (dx === -1 && cell.walls.left) return prev;
-    if (dy === 1 && cell.walls.bottom) return prev;
-    if (dy === -1 && cell.walls.top) return prev;
+      if (dx === 1 && cell.walls.right) return prev;
+      if (dx === -1 && cell.walls.left) return prev;
+      if (dy === 1 && cell.walls.bottom) return prev;
+      if (dy === -1 && cell.walls.top) return prev;
 
-    // ✅ ✅ ✅ BLOQUER OBSTACLE
-    if (mazeGrid[newR][newC].type === 2) {
-      return prev; // obstacle → on ne bouge pas
-    }
+      if (mazeGrid[newR][newC].type === 2) return prev;
 
-    stepsRef.current += 1;
-    return { r: newR, c: newC };
-  });
+      stepsRef.current += 1;
+      return { r: newR, c: newC };
+    });
   };
 
   useEffect(() => {
@@ -158,10 +153,6 @@ export default function PlayScreen({ route, navigation }: any) {
         timeLimit
       );
 
-      if (data?.newMedalUnlocked) {
-        Alert.alert("🎉 Nouvelle médaille !", data.newMedalUnlocked);
-      }
-
       let nextNiveau = niveau;
       let nextLevel = level + 1;
 
@@ -178,29 +169,20 @@ export default function PlayScreen({ route, navigation }: any) {
         level: nextLevel,
         score: data?.score || 0,
         time: hasTimer ? elapsed : null,
+        medal: data?.newMedalUnlocked || null,
       });
     };
 
     handleWin();
-  }, [
-    player,
-    end,
-    mazeGrid.length,
-    won,
-    niveau,
-    level,
-    optimalSteps,
-    navigation,
-    hasTimer,
-  ]);
+  }, [player, end]);
 
   const { width, height } = Dimensions.get("window");
   const gridSize = mazeGrid.length;
   const reservedHeight = 220;
 
-  const maxWidthSize = (width * 0.9) / gridSize;
-  const maxHeightSize = (height - reservedHeight) / gridSize;
-  const cellSize = Math.floor(Math.min(maxWidthSize, maxHeightSize));
+  const cellSize = Math.floor(
+    Math.min((width * 0.9) / gridSize, (height - reservedHeight) / gridSize)
+  );
 
   if (loading || !mazeGrid.length) {
     return (
@@ -219,11 +201,7 @@ export default function PlayScreen({ route, navigation }: any) {
   }
 
   return (
-    <ImageBackground
-      source={require("../assets/play.png")}
-      style={styles.bg}
-      resizeMode="cover"
-    >
+    <ImageBackground source={require("../assets/play.png")} style={styles.bg}>
       <View style={styles.overlay} />
 
       <View style={styles.container}>
@@ -231,7 +209,6 @@ export default function PlayScreen({ route, navigation }: any) {
           <Text style={styles.title}>
             {niveau} — Level {level}
           </Text>
-
           {hasTimer && <Text style={styles.timer}>⏱ {timeLeft}s</Text>}
         </View>
 
