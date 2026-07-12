@@ -94,6 +94,12 @@ export default function Inscription({ navigation }: any) {
 
       await AsyncStorage.setItem("token", data.token);
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
+      // Nettoyage défensif : anciennes clés locales de progression
+      // (versions précédentes de l'app stockaient la progression par
+      // appareil au lieu du compte — on s'assure qu'elles ne subsistent pas)
+      await AsyncStorage.multiRemove([
+        "progress_Facile", "progress_Intermédiaire", "progress_Difficile",
+      ]);
 
       navigation.replace("Acceuil");
     } catch {

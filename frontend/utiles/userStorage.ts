@@ -21,7 +21,10 @@ export const getUser = async () => {
 
 export const clearUser = async () => {
   try {
-    await AsyncStorage.multiRemove([KEY, "token"]);
+    await AsyncStorage.multiRemove([
+      KEY, "token",
+      "progress_Facile", "progress_Intermédiaire", "progress_Difficile",
+    ]);
   } catch (e) {
     console.error("clearUser error:", e);
   }

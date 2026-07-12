@@ -48,6 +48,9 @@ export default function LoginScreen({ navigation }: any) {
 
       await AsyncStorage.setItem("token", data.token);
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
+      await AsyncStorage.multiRemove([
+        "progress_Facile", "progress_Intermédiaire", "progress_Difficile",
+      ]);
 
       navigation.replace("Acceuil");
     } catch {

@@ -11,7 +11,7 @@ function getDifficulty(niveau, level) {
     };
   }
 
-  // Niveau INTERMÉDIAIRE — 5 levels, timer, peu d'obstacles
+  // Niveau INTERMÉDIAIRE — 5 levels, timer SEULEMENT, pas d'obstacles
   if (niveau === "Intermédiaire") {
     const sizes = { 1: 11, 2: 13, 3: 13, 4: 15, 5: 15 };
     const times = { 1: 120, 2: 100, 3: 90, 4: 80, 5: 70 };
@@ -20,8 +20,8 @@ function getDifficulty(niveau, level) {
       size: sizes[level] || 11,
       hasTimer: true,
       timeLimit: times[level] || 90,
-      obstacles: true,
-      obstacleCount: Math.floor(level * 1.5),
+      obstacles: false,
+      obstacleCount: 0,
     };
   }
 

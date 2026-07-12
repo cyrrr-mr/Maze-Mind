@@ -4,23 +4,45 @@ import {
   StyleSheet, ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getProgress } from "../utiles/progress";
 import { getMedalForNiveau } from "../utiles/medals";
-
-const TOTAL: Record<string, number> = {
-  Facile:           3,
-  "Intermédiaire":  5,
-  Difficile:        5,
-};
+import { authFetch } from "../utiles/api";
+import { TOTAL_LEVELS } from "../utiles/levels";
 
 export default function Progression({ route, navigation }: any) {
   const { niveau } = route.params;
-  const total = TOTAL[niveau] || 3;
+  const total = TOTAL_LEVELS[niveau] || 3;
   const [unlocked, setUnlocked] = useState(1);
 
   useFocusEffect(
     React.useCallback(() => {
-      getProgress(niveau).then((p: number) => setUnlocked(Math.max(p, 1)));
+      let cancelled = false;
+
+      const refresh = async () => {
+        // 1) Source de vérité : le backend (lié au compte)
+        try {
+          const res = await authFetch("/api/auth/profile");
+          if (res.ok) {
+            const user = await res.json();
+            await AsyncStorage.setItem("user", JSON.stringify(user));
+            if (!cancelled) {
+              const p = user?.progress?.[niveau];
+              setUnlocked(Math.max(typeof p === "number" ? p : 1, 1));
+            }
+            return;
+          }
+        } catch {
+          // hors-ligne : on retombe sur le cache local ci-dessous
+        }
+
+        // 2) Repli hors-ligne : dernière valeur connue du compte en cache
+        const p = await getProgress(niveau);
+        if (!cancelled) setUnlocked(Math.max(p, 1));
+      };
+
+      refresh();
+      return () => { cancelled = true; };
     }, [niveau])
   );
 

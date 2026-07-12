@@ -5,8 +5,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MazeBoard from "../components/MazeBoard";
 import Joystick  from "../components/Joystick";
-import { unlockLevel } from "../utiles/progress";
-import { addScore }    from "../utiles/score";
+import { authFetch } from "../utiles/api";
 
 const API_URL = "https://maze-mind.onrender.com";
 
@@ -26,6 +25,8 @@ export default function PlayScreen({ route, navigation }: any) {
   const [hasTimer, setHasTimer]         = useState(false);
   const [avatarIdx, setAvatarIdx]       = useState(0);
   const [optimalSteps, setOptimalSteps] = useState(0);
+  const [obstacles, setObstacles]       = useState<[number, number][]>([]);
+  const [saving, setSaving]             = useState(false);
 
   const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const stepsRef     = useRef(0);
@@ -83,6 +84,7 @@ export default function PlayScreen({ route, navigation }: any) {
       setHasTimer(data.hasTimer || false);
       setTimeLeft(data.timeLimit || 0);
       setOptimalSteps(data.optimalSteps || 0);
+      setObstacles(data.obstacles || []);
       timeLimitRef.current = data.timeLimit || 0;
     } catch (err) {
       console.error("loadMaze error:", err);
@@ -117,12 +119,16 @@ export default function PlayScreen({ route, navigation }: any) {
   }, [loading, hasTimer, navigation, niveau, level]);
 
   // Move
+  const isObstacle = (r: number, c: number) =>
+    obstacles.some(([or, oc]) => or === r && oc === c);
+
   const move = (dx: number, dy: number) => {
     setPlayer((prev) => {
       const newR = prev.r + dy;
       const newC = prev.c + dx;
 
       if (!mazeGrid[newR] || mazeGrid[newR][newC] === undefined) return prev;
+      if (isObstacle(newR, newC)) return prev;
 
       const cell = mazeGrid[prev.r][prev.c];
       if (dx === 1  && cell.walls.right)  return prev;
@@ -135,7 +141,9 @@ export default function PlayScreen({ route, navigation }: any) {
     });
   };
 
-  // Win check
+  // Win check — la partie est déclarée gagnée côté client, mais le score,
+  // le déblocage du niveau suivant et les médailles sont calculés et
+  // persistés côté BACKEND (source de vérité liée au compte), pas en local.
   useEffect(() => {
     if (!mazeGrid.length || won) return;
     if (player.r !== end.r || player.c !== end.c) return;
@@ -148,24 +156,65 @@ export default function PlayScreen({ route, navigation }: any) {
     const elapsed   = elapsedRef.current;
     const timeLimit = timeLimitRef.current;
 
-    const stepRatio = optimalSteps > 0 ? optimalSteps / Math.max(steps, 1) : 1;
-    let score = Math.round(1000 * Math.min(stepRatio, 1));
-    if (hasTimer && timeLimit > 0) {
-      const timeBonus = Math.round(500 * (1 - elapsed / timeLimit));
-      score += Math.max(timeBonus, 0);
-      if (niveau === "Difficile")       score *= 2;
-      else if (niveau === "Intermédiaire") score = Math.round(score * 1.5);
-    }
-    score = Math.max(score, 50);
+    const fallbackScore = () => {
+      const stepRatio = optimalSteps > 0 ? optimalSteps / Math.max(steps, 1) : 1;
+      let score = Math.round(1000 * Math.min(stepRatio, 1));
+      if (hasTimer && timeLimit > 0) {
+        const timeBonus = Math.round(500 * (1 - elapsed / timeLimit));
+        score += Math.max(timeBonus, 0);
+        if (niveau === "Difficile")       score *= 2;
+        else if (niveau === "Intermédiaire") score = Math.round(score * 1.5);
+      }
+      return Math.max(score, 50);
+    };
 
-    unlockLevel(niveau, level + 1);
-    addScore(score);
+    (async () => {
+      setSaving(true);
+      let score = fallbackScore();
+      let newlyEarnedMedal: string | null = null;
 
-    navigation.replace("Win", {
-      niveau, level,
-      time:  hasTimer ? elapsed : null,
-      score,
-    });
+      try {
+        const prevUserRaw = await AsyncStorage.getItem("user");
+        const medalsBefore = prevUserRaw
+          ? JSON.parse(prevUserRaw).medals || {}
+          : {};
+
+        const res = await authFetch("/api/performances", {
+          method: "POST",
+          body: JSON.stringify({
+            niveau, level, steps, optimalSteps,
+            timeTaken: elapsed, timeLimit,
+          }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          score = data.score;
+          await AsyncStorage.setItem("user", JSON.stringify(data.user));
+          const medalsAfter = data.user?.medals || {};
+          newlyEarnedMedal =
+            Object.keys(medalsAfter).find(
+              (id) => medalsAfter[id] && !medalsBefore[id]
+            ) || null;
+        } else {
+          console.error("Erreur sauvegarde performance:", data.error);
+        }
+      } catch (err) {
+        // Hors-ligne / backend injoignable : le score affiché est estimé,
+        // mais la progression réelle ne sera actualisée qu'à la prochaine
+        // connexion réussie (elle reste fiable côté compte).
+        console.error("save performance error:", err);
+      } finally {
+        setSaving(false);
+      }
+
+      navigation.replace("Win", {
+        niveau, level,
+        time: hasTimer ? elapsed : null,
+        score,
+        newlyEarnedMedal,
+      });
+    })();
   }, [player, end, mazeGrid.length, won, navigation, niveau, level, hasTimer, optimalSteps]);
 
   const timerColor = () => {
@@ -221,6 +270,7 @@ export default function PlayScreen({ route, navigation }: any) {
           end={end}
           cellSize={cellSize}
           avatarIndex={avatarIdx}
+          obstacles={obstacles}
         />
 
         <Joystick onMove={move} />

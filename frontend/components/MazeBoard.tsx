@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, Image } from "react-native";
+import { View, StyleSheet, Image, Text } from "react-native";
 
 type Cell = {
   walls: { top: boolean; right: boolean; bottom: boolean; left: boolean };
@@ -11,6 +11,7 @@ type Props = {
   end: { r: number; c: number };
   cellSize: number;
   avatarIndex?: number;
+  obstacles?: [number, number][];
 };
 
 const avatars = [
@@ -23,19 +24,24 @@ const avatars = [
 const WALL_COLOR      = "#6C63FF";
 const PATH_COLOR      = "#FFF8F0";
 const END_COLOR       = "#FFD93D";
+const OBSTACLE_COLOR  = "#4A4A4A";
 const BORDER_RADIUS   = 3;
 const WALL_THICKNESS  = 2;
 
-export default function MazeBoard({ grid, player, end, cellSize, avatarIndex = 0 }: Props) {
+export default function MazeBoard({ grid, player, end, cellSize, avatarIndex = 0, obstacles = [] }: Props) {
   if (!grid || !grid.length) return null;
+
+  const isObstacle = (r: number, c: number) =>
+    obstacles.some(([or, oc]) => or === r && oc === c);
 
   return (
     <View style={[styles.mazeWrapper, { borderColor: WALL_COLOR, borderWidth: 3, borderRadius: 12, overflow: "hidden" }]}>
       {grid.map((row, r) => (
         <View key={r} style={styles.row}>
           {row.map((cell, c) => {
-            const isPlayer = player.r === r && player.c === c;
-            const isEnd    = end.r === r && end.c === c;
+            const isPlayer   = player.r === r && player.c === c;
+            const isEnd      = end.r === r && end.c === c;
+            const isObst     = isObstacle(r, c);
 
             return (
               <View
@@ -45,7 +51,7 @@ export default function MazeBoard({ grid, player, end, cellSize, avatarIndex = 0
                   {
                     width: cellSize,
                     height: cellSize,
-                    backgroundColor: isEnd ? END_COLOR : PATH_COLOR,
+                    backgroundColor: isObst ? OBSTACLE_COLOR : isEnd ? END_COLOR : PATH_COLOR,
                     borderTopWidth:    cell.walls.top    ? WALL_THICKNESS : 0,
                     borderRightWidth:  cell.walls.right  ? WALL_THICKNESS : 0,
                     borderBottomWidth: cell.walls.bottom ? WALL_THICKNESS : 0,
@@ -54,6 +60,9 @@ export default function MazeBoard({ grid, player, end, cellSize, avatarIndex = 0
                   },
                 ]}
               >
+                {isObst && (
+                  <Text style={{ fontSize: Math.max(cellSize - 10, 10) }}>🪨</Text>
+                )}
                 {isPlayer && (
                   <Image
                     source={avatars[avatarIndex] || avatars[0]}

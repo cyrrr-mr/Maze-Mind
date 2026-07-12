@@ -3,6 +3,8 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   Animated, Dimensions,
 } from "react-native";
+import { TOTAL_LEVELS, nextNiveau } from "../utiles/levels";
+import { MEDALS } from "../utiles/medals";
 
 const { width, height } = Dimensions.get("window");
 
@@ -44,7 +46,36 @@ function ConfettiPiece({ color, delay }: { color: string; delay: number }) {
 }
 
 export default function WinScreen({ route, navigation }: any) {
-  const { niveau, level, time, score } = route.params;
+  const { niveau, level, time, score, newlyEarnedMedal } = route.params;
+
+  const total = TOTAL_LEVELS[niveau] || 3;
+  const isLastLevelOfNiveau = level >= total;
+  const upcomingNiveau = nextNiveau(niveau);
+  const medalInfo = newlyEarnedMedal
+    ? MEDALS.find((m) => m.id === newlyEarnedMedal)
+    : null;
+
+  const goNext = () => {
+    if (!isLastLevelOfNiveau) {
+      // Encore des niveaux dans cette même difficulté
+      navigation.replace("Play", { niveau, level: level + 1 });
+      return;
+    }
+    if (upcomingNiveau) {
+      // Toute la difficulté est terminée : direction l'écran de progression
+      // du palier suivant (Facile → Intermédiaire → Difficile)
+      navigation.replace("Progression", { niveau: upcomingNiveau });
+      return;
+    }
+    // Difficile niveau 5 terminé : plus rien après, retour à l'accueil
+    navigation.replace("Acceuil");
+  };
+
+  const nextLabel = !isLastLevelOfNiveau
+    ? "▶ Niveau suivant"
+    : upcomingNiveau
+    ? `🚀 Passer en ${upcomingNiveau}`
+    : "🏠 Retour à l'accueil";
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const [s1, s2, s3] = [
@@ -104,11 +135,20 @@ export default function WinScreen({ route, navigation }: any) {
           <Text style={styles.time}>⏱ Temps : {time}s</Text>
         )}
 
+        {medalInfo && (
+          <View style={[styles.medalBanner, { borderColor: medalInfo.color }]}>
+            <Text style={styles.medalBannerEmoji}>{medalInfo.emoji}</Text>
+            <Text style={styles.medalBannerText}>
+              Médaille "{medalInfo.label}" débloquée !
+            </Text>
+          </View>
+        )}
+
         <TouchableOpacity
           style={styles.btnNext}
-          onPress={() => navigation.replace("Play", { niveau, level: level + 1 })}
+          onPress={goNext}
         >
-          <Text style={styles.btnNextText}>▶ Niveau suivant</Text>
+          <Text style={styles.btnNextText}>{nextLabel}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -145,6 +185,15 @@ const styles = StyleSheet.create({
   scoreLabel:  { fontSize: 12, color: "#888", letterSpacing: 1 },
   scoreValue:  { fontSize: 28, fontWeight: "900", color: "#333" },
   time:        { fontSize: 14, color: "#666", marginBottom: 20 },
+  medalBanner: {
+    flexDirection: "row", alignItems: "center",
+    borderWidth: 2, borderRadius: 16,
+    paddingVertical: 8, paddingHorizontal: 14,
+    marginBottom: 16, gap: 8,
+    backgroundColor: "#FFFBEB",
+  },
+  medalBannerEmoji: { fontSize: 22 },
+  medalBannerText:  { fontSize: 13, fontWeight: "700", color: "#444", flexShrink: 1 },
   btnNext: {
     backgroundColor: "#6C63FF", paddingVertical: 14,
     paddingHorizontal: 30, borderRadius: 25, marginBottom: 10,

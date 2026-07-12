@@ -45,7 +45,10 @@ export default function Acceuil({ navigation }: any) {
           text: "Déconnecter",
           style: "destructive",
           onPress: async () => {
-            await AsyncStorage.multiRemove(["token", "user"]);
+            await AsyncStorage.multiRemove([
+              "token", "user",
+              "progress_Facile", "progress_Intermédiaire", "progress_Difficile",
+            ]);
             navigation.replace("Auth");
           },
         },
