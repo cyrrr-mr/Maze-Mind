@@ -1,97 +1,150 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+🧩 MazeMind — Labyrinthe Intelligent Évolutif
+Une application mobile Android de jeu de labyrinthe intelligent, générée procéduralement par algorithmes d'IA, avec un système de progression, de score et de médailles automatiques.
 
-# Getting Started
+> Projet universitaire — Licence Génie Logiciel | ISIMA Mahdia |  
+> Équipe : Lobna Kazdar · Sirine Merdessi · Malek Hammami
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Aperçu :
 
-## Step 1: Start Metro
+MazeMind est un jeu de labyrinthe mobile Full Stack où chaque partie génère un labyrinthe **unique** grâce à l'algorithme **DFS**. Le joueur progresse à travers **13 niveaux** répartis sur 3 modes de difficulté, avec un système de score basé sur le temps et les pas, et un système de **médailles automatiques** côté backend.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Fonctionnalités:
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **Génération procédurale** — chaque labyrinthe est unique (algorithme DFS)
+  **3 modes de difficulté** :
+  - Facile — 3 niveaux, sans timer, sans obstacles
+  - Intermédiaire — 5 niveaux, avec timer
+  - Difficile — 5 niveaux, timer + obstacles intelligents
+- **Score intelligent** — basé sur les pas, le temps et la difficulté
+- **Système de médailles** — Débutant / Avancé / Pro, déclenchés automatiquement
+- **Authentification JWT** — inscription, connexion, sessions sécurisées
+  **Profil utilisateur** — avatar personnalisable, score total, médailles
+- **Historique des parties** — suivi de la progression
 
-```sh
-# Using npm
+## Architecture :
+Frontend (React Native)
+↓
+API REST (Express.js)
+↓
+Module IA (DFS + BFS)
+↓
+MongoDB Atlas (Cloud)
+
+## Technologies:
+
+ Frontend : React Native CLI · TypeScript 
+ Navigation : React Navigation 
+ Stockage local : AsyncStorage 
+ Backend : Node.js Express.js 
+ Authentification : JWT · bcrypt 
+ Base de données : MongoDB Atlas (Cloud) 
+ Algorithmes : DFS (génération) · BFS (résolution) 
+ Déploiement : Render.com 
+
+ ## Structure du projet :
+ Maze-Mind/
+├── frontend/
+│ ├── screens/ # Écrans (Login, Home, Game, Profile...)
+│ ├── components/ # Composants réutilisables
+│ ├── utils/ # api.js, storage.js
+│ └── navigation/ # Stack Navigator
+├── backend/
+│ ├── controllers/ # Logique métier
+│ ├── routes/ # Endpoints REST
+│ ├── models/ # Schémas Mongoose
+│ ├── ai/ # Algorithmes DFS, BFS
+│ └── middlewares/ # verifyToken.js
+└── android/ # Build Android
+
+## Installation & Lancement
+
+ **Prérequis**
+- Node.js ≥ 18
+- Android Studio + Android SDK
+- Java JDK 17
+- Un émulateur Android ou un appareil physique
+
+ **Cloner le repo**
+```bash
+git clone https://github.com/cyrrr-mr/Maze-Mind.git
+cd Maze-Mind
+```
+
+**Installer les dépendances frontend**
+```bash
+npm install
+```
+
+**Configurer le backend**
+```bash
+cd backend
+npm install
+```
+Créer un fichier `.env` dans `/backend` :
+```env
+MONGO_URI=your_mongodb_atlas_uri
+JWT_SECRET=your_secret_key
+PORT=5000
+```
+
+**Lancer le backend**
+```bash
+cd backend
+node server.js
+```
+
+**Lancer l'application**
+```bash
+# Dans le dossier racine
 npm start
 
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
+# Dans un second terminal
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### iOS
+---
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+**Backend en production**
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+Le backend est déployé sur **Render.com** :  
+🔗 `https://maze-mind.onrender.com`
 
-```sh
-bundle install
-```
+---
 
-Then, and every time you update your native dependencies, run:
+## Algorithmes
 
-```sh
-bundle exec pod install
-```
+### DFS — Génération du labyrinthe
+- Initialise une grille pleine de murs
+- Explore récursivement les cellules non visitées
+- Supprime progressivement les murs
+- Garantit un chemin unique · Complexité : **O(n²)**
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### BFS — Résolution & Score
+- Calcule le chemin optimal entre départ et sortie
+- Sert de référence pour calculer l'efficacité du joueur
+- Protège les cellules du chemin avant placement des obstacles (mode Difficile)
 
-```sh
-# Using npm
-npm run ios
+### Formule de Score
 
-# OR using Yarn
-yarn ios
-```
+Score = (StepScore + TimeBonus) × DifficultyMultiplier
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+DifficultyMultiplier : Facile ×1.0 | Intermédiaire ×1.5 | Difficile ×2.0
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+##  Système de Médailles
 
-## Step 3: Modify your app
+| Médaille | Condition |
+|  Débutant | Terminer tous les niveaux Facile |
+|  Avancé | Terminer tous les niveaux Intermédiaire |
+|  Pro | Terminer tous les niveaux Difficile |
 
-Now that you have successfully run the app, let's make changes!
+> Déclenchement automatique côté backend — non falsifiable côté client.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+---
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+##  Sécurité
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+- Authentification par **JWT** (token signé, vérifié à chaque requête)
+- Mots de passe hashés avec **bcrypt** (10 rounds)
+- Variables sensibles dans **`.env`** (exclu du repo via `.gitignore`)
+- **IP Whitelist** MongoDB Atlas restreinte au serveur Render
 
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
