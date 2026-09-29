@@ -146,5 +146,4 @@ DifficultyMultiplier : Facile ×1.0 | Intermédiaire ×1.5 | Difficile ×2.0
 - Authentification par **JWT** (token signé, vérifié à chaque requête)
 - Mots de passe hashés avec **bcrypt** (10 rounds)
 - Variables sensibles dans **`.env`** (exclu du repo via `.gitignore`)
-- **IP Whitelist** MongoDB Atlas restreinte au serveur Render
-
+- **IP Whitelist** MongoDB Atlas restreinte au serveur Render.  
